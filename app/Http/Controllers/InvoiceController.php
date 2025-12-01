@@ -79,14 +79,22 @@ class InvoiceController extends Controller
 
             // Buat invoice dulu tanpa items
             $invoice = new Invoice();
+            $invoice->invoice_number = $this->generateInvoiceNumber(); // Gunakan method yang sama
             $invoice->invoice_date = $request->invoice_date;
             $invoice->payment_deadline = $request->payment_deadline;
             $invoice->client_name = $request->client_name;
             $invoice->created_by = Auth::id();
             $invoice->template = $request->input('template', 'default');
             $invoice->total_amount = 0;
+            $invoice->status = 'Belum Lunas';
+            $invoice->total_received = 0;
+            $invoice->remaining_amount = 0;
 
-            \Log::info('Invoice object created', ['invoice' => $invoice->toArray()]);
+            \Log::info('Invoice object created', ['invoice_number' => $invoice->invoice_number]);
+
+            // Simpan invoice untuk mendapatkan ID
+            $invoice->save();
+            \Log::info('Invoice saved with ID: ' . $invoice->id);
 
             // Simpan invoice untuk mendapatkan ID
             $invoice->save();
@@ -459,57 +467,75 @@ class InvoiceController extends Controller
     public function continuePayment(Invoice $invoice)
     {
         try {
+            \Log::info('Starting continue payment for invoice: ' . $invoice->id);
+
             // Duplikat data invoice utama
             $newInvoice = $invoice->replicate();
             $newInvoice->invoice_number = $this->generateInvoiceNumber();
             $newInvoice->invoice_date = now();
             $newInvoice->payment_deadline = null; // Reset deadline
+            
+            // Set status dan amount fields dengan nilai default
             $newInvoice->status = 'Belum Lunas';
             $newInvoice->total_received = 0;
             $newInvoice->remaining_amount = $newInvoice->total_amount;
             $newInvoice->created_by = Auth::id();
+            
+            \Log::info('Saving new invoice: ' . $newInvoice->invoice_number);
             $newInvoice->save();
+            \Log::info('New invoice saved with ID: ' . $newInvoice->id);
 
             // Duplikat items
+            \Log::info('Duplicating items...');
             foreach ($invoice->items as $item) {
                 $newItem = $item->replicate();
                 $newItem->invoice_id = $newInvoice->id;
                 $newItem->save();
+                \Log::info('Item duplicated: ' . $newItem->id);
             }
 
             // Duplikat payment steps (reset status)
+            \Log::info('Duplicating payment steps...');
             foreach ($invoice->paymentSteps as $step) {
                 $newStep = $step->replicate();
                 $newStep->invoice_id = $newInvoice->id;
                 $newStep->payment_date = null; // Reset tanggal pembayaran
                 $newStep->save();
+                \Log::info('Payment step duplicated: ' . $newStep->id);
             }
 
-            // Duplikat attachments (jika perlu)
+            // Duplikat attachments (jika ada)
+            \Log::info('Duplicating attachments...');
             foreach ($invoice->attachments as $attachment) {
-                $newAttachment = $attachment->replicate();
-                $newAttachment->invoice_id = $newInvoice->id;
-                
-                // Duplikat file fisik
-                $originalPath = 'storage/' . $attachment->path;
-                $newFilename = 'attachment_' . $newInvoice->id . '_' . time() . '_' . $attachment->filename;
-                $newPath = 'attachments/' . $newFilename;
-                
-                if (Storage::disk('public')->exists($attachment->path)) {
-                    Storage::disk('public')->copy($attachment->path, $newPath);
-                    $newAttachment->path = $newPath;
-                    $newAttachment->filename = $attachment->filename;
-                    $newAttachment->save();
+                try {
+                    $newAttachment = $attachment->replicate();
+                    $newAttachment->invoice_id = $newInvoice->id;
+                    
+                    // Duplikat file fisik
+                    $newFilename = 'attachment_' . $newInvoice->id . '_' . time() . '_' . $attachment->filename;
+                    $newPath = 'attachments/' . $newFilename;
+                    
+                    if (Storage::disk('public')->exists($attachment->path)) {
+                        Storage::disk('public')->copy($attachment->path, $newPath);
+                        $newAttachment->path = $newPath;
+                        $newAttachment->filename = $attachment->filename;
+                        $newAttachment->save();
+                        \Log::info('Attachment duplicated: ' . $newAttachment->id);
+                    }
+                } catch (\Exception $e) {
+                    \Log::warning('Failed to duplicate attachment: ' . $e->getMessage());
+                    // Continue dengan attachment lainnya
                 }
             }
 
-            session(['is_duplicated' => true]);
-
+            \Log::info('Continue payment completed successfully');
+            
             return redirect()->route('invoices.edit', $newInvoice)
                 ->with('success', 'Invoice berhasil diduplikat. Silakan lanjutkan pembayaran.');
 
         } catch (\Exception $e) {
             \Log::error('Continue payment error: ' . $e->getMessage());
+            \Log::error('Stack trace: ' . $e->getTraceAsString());
             return redirect()->back()->with('error', 'Gagal melanjutkan pembayaran: ' . $e->getMessage());
         }
     }
@@ -519,20 +545,30 @@ class InvoiceController extends Controller
         $prefix = 'INV';
         $year = date('Y');
         $month = date('m');
+        $day = date('d');
+        
+        \Log::info('Generating invoice number for date: ' . $year . $month . $day);
         
         // Cari invoice terakhir dengan prefix yang sama
-        $lastInvoice = Invoice::where('invoice_number', 'like', $prefix . '-' . $year . $month . '%')
+        $lastInvoice = Invoice::where('invoice_number', 'like', $prefix . '-%')
             ->orderBy('invoice_number', 'desc')
             ->first();
+        
+        \Log::info('Last invoice found: ' . ($lastInvoice ? $lastInvoice->invoice_number : 'None'));
         
         if ($lastInvoice) {
             // Extract number dari invoice number terakhir
             $lastNumber = intval(substr($lastInvoice->invoice_number, -4));
             $newNumber = str_pad($lastNumber + 1, 4, '0', STR_PAD_LEFT);
+            \Log::info('Last number: ' . $lastNumber . ', New number: ' . $newNumber);
         } else {
             $newNumber = '0001';
+            \Log::info('No previous invoice, starting with: ' . $newNumber);
         }
         
-        return $prefix . '-' . $year . $month . '-' . $newNumber;
+        $newInvoiceNumber = $prefix . '-' . $year . $month . $day . '-' . $newNumber;
+        \Log::info('Generated invoice number: ' . $newInvoiceNumber);
+        
+        return $newInvoiceNumber;
     }
 }

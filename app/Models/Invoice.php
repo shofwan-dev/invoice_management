@@ -2,15 +2,28 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Invoice extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
-        'invoice_number','invoice_date','payment_deadline','client_name','total_amount','created_by','template'
+        'invoice_number',
+        'invoice_date',
+        'payment_deadline',
+        'client_name',
+        'total_amount',
+        'total_received',
+        'remaining_amount',
+        'status',
+        'template',
+        'created_by'
     ];
+
 
     protected static function booted()
     {
