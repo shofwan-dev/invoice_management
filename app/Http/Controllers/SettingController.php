@@ -91,4 +91,128 @@ class SettingController extends Controller
 
         return redirect()->route('settings.edit')->with('success', 'Pengaturan berhasil disimpan.');
     }
+
+    public function testWhatsApp(Request $request)
+    {
+        \Log::info('=== START WHATSAPP TEST ===');
+        \Log::info('Request data:', $request->all());
+
+        try {
+            $validated = $request->validate([
+                'whatsapp_endpoint' => 'required|url',
+                'whatsapp_api_key' => 'required|string',
+                'whatsapp_sender' => 'required|string',
+                'whatsapp_number' => 'required|string',
+            ]);
+
+            $endpoint = $validated['whatsapp_endpoint'];
+            $apiKey = $validated['whatsapp_api_key'];
+            $sender = $validated['whatsapp_sender'];
+            $number = $validated['whatsapp_number'];
+            $message = "Test Connection from " . config('app.name');
+
+            \Log::info('Sending test to:', [
+                'endpoint' => $endpoint,
+                'sender' => $sender,
+                'number' => $number,
+                'message' => $message
+            ]);
+
+            $client = new \GuzzleHttp\Client([
+                'timeout' => 30,
+                'verify' => false, // Nonaktifkan SSL verification untuk testing
+            ]);
+
+            // Coba metode GET terlebih dahulu (sesuai dokumentasi)
+            $url = $endpoint . '?' . http_build_query([
+                'api_key' => $apiKey,
+                'sender' => $sender,
+                'number' => $number,
+                'message' => $message
+            ]);
+
+            \Log::info('Trying GET request to: ' . $url);
+
+            $response = $client->get($url);
+            
+            $statusCode = $response->getStatusCode();
+            $body = $response->getBody()->getContents();
+
+            \Log::info('Response received:', [
+                'status_code' => $statusCode,
+                'body' => $body
+            ]);
+
+            if ($statusCode === 200) {
+                \Log::info('WhatsApp test SUCCESS');
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Pesan test berhasil dikirim'
+                ]);
+            } else {
+                \Log::warning('WhatsApp test failed with status: ' . $statusCode);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Response status: ' . $statusCode . ' - ' . $body
+                ]);
+            }
+
+        } catch (\GuzzleHttp\Exception\RequestException $e) {
+            \Log::error('WhatsApp RequestException: ' . $e->getMessage());
+            
+            // Coba metode POST jika GET gagal
+            try {
+                \Log::info('Trying POST method...');
+                
+                $client = new \GuzzleHttp\Client([
+                    'timeout' => 30,
+                    'verify' => false,
+                ]);
+
+                $response = $client->post($endpoint, [
+                    'headers' => [
+                        'Content-Type' => 'application/json',
+                    ],
+                    'json' => [
+                        'api_key' => $apiKey,
+                        'sender' => $sender,
+                        'number' => $number,
+                        'message' => $message,
+                    ],
+                ]);
+
+                $statusCode = $response->getStatusCode();
+                $body = $response->getBody()->getContents();
+
+                \Log::info('POST Response:', [
+                    'status_code' => $statusCode,
+                    'body' => $body
+                ]);
+
+                if ($statusCode === 200) {
+                    return response()->json([
+                        'success' => true,
+                        'message' => 'Pesan test berhasil dikirim via POST'
+                    ]);
+                }
+
+            } catch (\Exception $postException) {
+                \Log::error('POST also failed: ' . $postException->getMessage());
+            }
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal terhubung: ' . $e->getMessage()
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('WhatsApp test general error: ' . $e->getMessage());
+            \Log::error('Stack trace: ' . $e->getTraceAsString());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Error: ' . $e->getMessage()
+            ]);
+        }
+    }
 }

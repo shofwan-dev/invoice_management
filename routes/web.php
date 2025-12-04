@@ -3,18 +3,12 @@
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\InvoiceController;
+use App\Http\Controllers\SettingController;
 
-Route::post('/invoices/bulk-export', [InvoiceController::class, 'bulkExport'])->name('invoices.bulk-export');
-Route::delete('/invoices/bulk-delete', [InvoiceController::class, 'bulkDelete'])->name('invoices.bulk-delete');
 /*
 |--------------------------------------------------------------------------
 | Web Routes
 |--------------------------------------------------------------------------
-|
-| Here is where you can register web routes for your application. These
-| routes are loaded by the RouteServiceProvider and all of them will
-| be assigned to the "web" middleware group. Make something great!
-|
 */
 
 Route::get('/', function () {
@@ -37,30 +31,29 @@ Route::middleware('auth')->group(function () {
 
 require __DIR__.'/auth.php';
 
-// Invoice routes (application scaffold)
-use App\Http\Controllers\SettingController;
-
+// Application routes
 Route::middleware(['auth'])->group(function () {
+    // Invoice routes
     Route::resource('invoices', InvoiceController::class);
     Route::get('/invoices/{invoice}/export', [InvoiceController::class, 'exportPdf'])->name('invoices.export');
-    Route::get('invoices/{invoice}/export', [InvoiceController::class, 'exportPdf'])->name('invoices.export');
     Route::post('/invoices/{invoice}/continue', [InvoiceController::class, 'continuePayment'])->name('invoices.continue');
-    Route::post('invoices/{invoice}/whatsapp', [InvoiceController::class, 'sendWhatsapp'])->name('invoices.whatsapp');
+    Route::post('/invoices/{invoice}/whatsapp', [InvoiceController::class, 'sendWhatsapp'])->name('invoices.whatsapp');
     
     // Bulk actions
-    Route::post('invoices/bulk-export', [InvoiceController::class, 'bulkExport'])->name('invoices.bulk-export');
-    Route::delete('invoices/bulk-delete', [InvoiceController::class, 'bulkDelete'])->name('invoices.bulk-delete');
+    Route::post('/invoices/bulk-export', [InvoiceController::class, 'bulkExport'])->name('invoices.bulk-export');
+    Route::delete('/invoices/bulk-delete', [InvoiceController::class, 'bulkDelete'])->name('invoices.bulk-delete');
     
     // Settings routes
-    Route::get('settings', [SettingController::class, 'edit'])->name('settings.edit');
-    Route::post('settings', [SettingController::class, 'update'])->name('settings.update');
+    Route::get('/settings', [SettingController::class, 'edit'])->name('settings.edit');
+    Route::post('/settings', [SettingController::class, 'update'])->name('settings.update');
+    Route::post('/settings/test-whatsapp', [SettingController::class, 'testWhatsApp'])->name('settings.test-whatsapp');
     
-    // Debug route
-    Route::get('debug-logo', function () {
+    // Debug routes
+    Route::get('/debug-logo', function () {
         return view('debug-logo');
     })->name('debug.logo');
     
-    Route::get('test-logo-pdf', function () {
+    Route::get('/test-logo-pdf', function () {
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.test-logo');
         $pdf->setOptions(['isRemoteEnabled' => true]);
         return $pdf->download('test-logo.pdf');
