@@ -5,12 +5,16 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\SettingController;
+use App\Http\Controllers\PublicInvoiceController;
 
 /*
 |--------------------------------------------------------------------------
 | Web Routes
 |--------------------------------------------------------------------------
 */
+
+Route::get('/invoice/verify/{unique_hash}', [PublicInvoiceController::class, 'verify'])
+    ->name('invoice.verify.public');
 
 Route::get('/', function () {
     return redirect()->route('invoices.index');
@@ -131,4 +135,15 @@ Route::middleware(['auth'])->group(function () {
         $pdf->setOptions(['isRemoteEnabled' => true]);
         return $pdf->download('test-logo.pdf');
     })->name('test.logo.pdf');
+
+   
+    // Existing invoice routes (with authentication)
+    Route::middleware('auth')->group(function () {
+        Route::resource('invoices', InvoiceController::class);
+        Route::post('/invoices/{invoice}/send-whatsapp', [InvoiceController::class, 'sendWhatsapp'])->name('invoices.send-whatsapp');
+        Route::get('/invoices/{invoice}/export-pdf', [InvoiceController::class, 'exportPdf'])->name('invoices.export-pdf');
+        Route::post('/invoices/bulk-export', [InvoiceController::class, 'bulkExport'])->name('invoices.bulk-export');
+        Route::post('/invoices/bulk-delete', [InvoiceController::class, 'bulkDelete'])->name('invoices.bulk-delete');
+        Route::get('/invoices/{invoice}/continue-payment', [InvoiceController::class, 'continuePayment'])->name('invoices.continue-payment');
+    });
 });

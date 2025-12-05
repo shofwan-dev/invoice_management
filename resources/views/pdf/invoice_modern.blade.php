@@ -257,8 +257,33 @@
                     <div class="col-md-6">
                         <p class="text-muted small mb-0">Kwitansi ini adalah bukti pembayaran yang sah<br>dan telah diterima oleh PT Kaffa Rizquna Wisata.</p>
                     </div>
+                    
                     <div class="col-md-6 text-end">
-                        <p class="mb-4">_____________________</p>
+                        <div style="text-align: right; margin-top: 50px;">
+                            @if(isset($verificationUrl) && $verificationUrl)
+                                <p style="margin-bottom: 5px; font-size: 10pt;">
+                                    Disahkan secara digital. Scan untuk verifikasi.
+                                </p>
+                                
+                                {{-- MENGHASILKAN QR CODE dengan FQCN dan styling --}}
+                                <img src="data:image/svg+xml;base64,{{ 
+                                    base64_encode(\SimpleSoftwareIO\QrCode\Facades\QrCode::size(100)->generate($verificationUrl)) 
+                                }}" alt="QR Code Verifikasi" 
+                                style="width: 100px; height: 100px; margin-bottom: 5px; border: 1px solid #ccc; padding: 5px;">
+                                
+                                <p style="font-size: 8pt; margin-bottom: 0;">
+                                    <i class="bi bi-shield-check"></i> Dokumen Terverifikasi
+                                </p>
+                            @else
+                                <p style="font-size: 10pt; color: #dc3545;">
+                                    Token verifikasi belum tersedia.
+                                </p>
+                            @endif
+                        </div>
+                        
+                        <p class="mb-4" style="margin-top: 20px; border-bottom: 1px solid #333; display: inline-block; padding-bottom: 5px;">
+                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                        </p>
                         <p class="text-muted small mb-0">{{ \App\Models\Setting::get('pic_name', 'Penanggung Jawab') }}</p>
                     </div>
                 </div>
