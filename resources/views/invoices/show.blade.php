@@ -162,7 +162,7 @@
                                 <th>Pembayaran ke</th>
                                 <th class="text-end">Jumlah</th>
                                 <th>Tanggal Pembayaran</th>
-                                <th>Ke Bank Mana</th>
+                                <th>Bank Tujuan</th>
                                 <th class="text-center">Status</th>
                             </tr>
                         </thead>

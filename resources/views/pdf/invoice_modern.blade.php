@@ -255,7 +255,7 @@
                 <!-- Footer -->
                 <div class="row mt-5 pt-4 border-top">
                     <div class="col-md-6">
-                        <p class="text-muted small mb-0">Kwitansiini adalah bukti pembayaran yang sah<br>dan telah diterima oleh PT Kaffa Rizquna Wisata.</p>
+                        <p class="text-muted small mb-0">Kwitansi ini adalah bukti pembayaran yang sah<br>dan telah diterima oleh PT Kaffa Rizquna Wisata.</p>
                     </div>
                     <div class="col-md-6 text-end">
                         <p class="mb-4">_____________________</p>

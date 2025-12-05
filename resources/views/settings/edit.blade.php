@@ -59,20 +59,26 @@
                                 <label class="form-label">Status Koneksi:</label>
                                 <div>
                                     @php
-                                        $whatsappStatus = session('whatsapp_status', 'unknown');
+                                        // Gunakan $whatsappStatus yang dikirim dari controller
                                         $statusBadgeClass = [
                                             'connected' => 'bg-success',
                                             'failed' => 'bg-danger', 
                                             'unknown' => 'bg-secondary'
-                                        ][$whatsappStatus];
+                                        ][$whatsappStatus ?? 'unknown'];
                                         
                                         $statusText = [
                                             'connected' => 'Terhubung',
                                             'failed' => 'Tidak Terhubung',
                                             'unknown' => 'Belum Diuji'
-                                        ][$whatsappStatus];
+                                        ][$whatsappStatus ?? 'unknown'];
                                     @endphp
                                     <span id="whatsapp-status" class="badge {{ $statusBadgeClass }} fs-6">{{ $statusText }}</span>
+                                    
+                                    @if($whatsappStatus === 'connected' && session('whatsapp_last_test'))
+                                        <small class="text-muted d-block mt-1">
+                                            Terakhir diuji: {{ \Carbon\Carbon::parse(session('whatsapp_last_test'))->diffForHumans() }}
+                                        </small>
+                                    @endif
                                 </div>
                             </div>
                         </div>
@@ -142,14 +148,6 @@
         </div>
     </div>
 
-    {{-- Debug Script --}}
-    <script>
-        console.log('WhatsApp Test Debug:');
-        console.log('Test button:', document.getElementById('test-whatsapp-connection'));
-        console.log('Status badge:', document.getElementById('whatsapp-status'));
-        console.log('CSRF token:', '{{ csrf_token() }}');
-    </script>
-
     {{-- Main WhatsApp Test Script --}}
     <script>
     document.addEventListener('DOMContentLoaded', function() {
@@ -209,10 +207,27 @@
                     console.log('Response data:', data);
                     if (data.success) {
                         statusBadge.className = 'badge bg-success fs-6';
-                        statusBadge.textContent = 'Connected';
+                        statusBadge.textContent = 'Terhubung';
+                        
+                        // Tampilkan timestamp
+                        const now = new Date();
+                        const timeString = now.toLocaleTimeString('id-ID', { 
+                            hour: '2-digit', 
+                            minute: '2-digit' 
+                        });
+                        const timestamp = document.createElement('small');
+                        timestamp.className = 'text-muted d-block mt-1';
+                        timestamp.textContent = `Terakhir diuji: ${timeString}`;
+                        
+                        // Hapus timestamp sebelumnya jika ada
+                        const existingTimestamp = statusBadge.nextElementSibling;
+                        if (existingTimestamp && existingTimestamp.tagName === 'SMALL') {
+                            existingTimestamp.remove();
+                        }
+                        statusBadge.parentNode.appendChild(timestamp);
                     } else {
                         statusBadge.className = 'badge bg-danger fs-6';
-                        statusBadge.textContent = 'Failed';
+                        statusBadge.textContent = 'Tidak Terhubung';
                         console.error('Error:', data.message);
                         alert('Test gagal: ' + data.message);
                     }
