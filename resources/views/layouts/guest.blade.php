@@ -7,6 +7,14 @@
 
         <title>{{ config('app.name', 'Laravel') }}</title>
 
+        @if(isset($settings['company_logo']) && $settings['company_logo'])
+        {{-- Menggunakan logo dari pengaturan sebagai favicon --}}
+        <link rel="icon" type="image/png" href="{{ $settings['company_logo'] }}">
+        @else
+            {{-- Fallback ke favicon default jika logo tidak ada --}}
+            <link rel="icon" type="image/png" href="{{ asset('favicon.png') }}"> 
+        @endif
+
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
