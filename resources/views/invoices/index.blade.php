@@ -257,8 +257,10 @@
             const allChecked = checkboxes.length > 0 && selectedCount === checkboxes.length;
             const someChecked = selectedCount > 0 && selectedCount < checkboxes.length;
             
-            selectAllCheckbox.checked = allChecked;
-            selectAllCheckbox.indeterminate = someChecked;
+            if (selectAllCheckbox) {
+                selectAllCheckbox.checked = allChecked;
+                selectAllCheckbox.indeterminate = someChecked;
+            }
         }
         
         // Event Listeners
@@ -348,7 +350,7 @@
                 
                 // Create form for bulk delete
                 const form = document.createElement('form');
-                form.method = 'POST';
+                form.method = 'POST'; // Kita menggunakan POST murni
                 form.action = '{{ route("invoices.bulk-delete") }}';
                 
                 // CSRF token
@@ -358,12 +360,8 @@
                 csrfInput.value = '{{ csrf_token() }}';
                 form.appendChild(csrfInput);
                 
-                // Method spoofing for DELETE
-                const methodInput = document.createElement('input');
-                methodInput.type = 'hidden';
-                methodInput.name = '_method';
-                methodInput.value = 'DELETE';
-                form.appendChild(methodInput);
+                // PERBAIKAN: Kode "Method Spoofing" (DELETE) dihapus di sini
+                // Agar request dikirim sebagai POST murni sesuai web.php
                 
                 // Add selected IDs
                 selectedIds.forEach(id => {

@@ -13,16 +13,19 @@ use App\Http\Controllers\PublicInvoiceController;
 |--------------------------------------------------------------------------
 */
 
+// Public Route (Invoice Verification)
 Route::get('/invoice/verify/{unique_hash}', [PublicInvoiceController::class, 'verify'])
     ->name('invoice.verify.public');
 
+// Landing Page Redirect
 Route::get('/', function () {
     return redirect()->route('invoices.index');
 });
 
+// Dashboard Route (with Auth and Verification)
 Route::get('/dashboard', function () {
-    // Statistik dasar
-    $invoices = \App\Models\Invoice::all();
+    // Statistik Dashboard
+    $invoices = \App\Models\Invoice::all(); 
     $totalInvoices = $invoices->count();
     $totalAmount = $invoices->sum('total_amount');
     $unpaidInvoices = \App\Models\Invoice::where('remaining_amount', '>', 0)->count();
@@ -63,32 +66,38 @@ Route::get('/dashboard', function () {
     ));
 })->middleware(['auth', 'verified'])->name('dashboard');
 
-Route::middleware('auth')->group(function () {
+// Authentication Routes (dari Breeze/Jetstream)
+require __DIR__.'/auth.php';
+
+// --- Application Routes (Membutuhkan otentikasi) ---
+Route::middleware(['auth'])->group(function () {
+    
+    // 1. Profile Routes
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-});
 
-require __DIR__.'/auth.php';
+    // 2. Invoice Routes
+    // PENTING: Custom routes diletakkan DI ATAS resource agar tidak dianggap sebagai {id}
+    
+    // Bulk Actions (Menggunakan POST agar kompatibel dengan form HTML)
+    Route::post('/invoices/bulk-export', [InvoiceController::class, 'bulkExport'])->name('invoices.bulk-export');
+    Route::post('/invoices/bulk-delete', [InvoiceController::class, 'bulkDelete'])->name('invoices.bulk-delete');
 
-// Application routes
-Route::middleware(['auth'])->group(function () {
-    // Invoice routes
-    Route::resource('invoices', InvoiceController::class);
+    // Single Item Custom Actions
     Route::get('/invoices/{invoice}/export', [InvoiceController::class, 'exportPdf'])->name('invoices.export');
     Route::post('/invoices/{invoice}/continue', [InvoiceController::class, 'continuePayment'])->name('invoices.continue');
     Route::post('/invoices/{invoice}/whatsapp', [InvoiceController::class, 'sendWhatsapp'])->name('invoices.whatsapp');
     
-    // Bulk actions
-    Route::post('/invoices/bulk-export', [InvoiceController::class, 'bulkExport'])->name('invoices.bulk-export');
-    Route::delete('/invoices/bulk-delete', [InvoiceController::class, 'bulkDelete'])->name('invoices.bulk-delete');
-    
-    // Settings routes
+    // Resource Route (CRUD Standar - Diletakkan paling bawah dalam grup invoice)
+    Route::resource('invoices', InvoiceController::class);
+
+    // 3. Settings Routes
     Route::get('/settings', [SettingController::class, 'edit'])->name('settings.edit');
     Route::post('/settings', [SettingController::class, 'update'])->name('settings.update');
     Route::post('/settings/test-whatsapp', [SettingController::class, 'testWhatsApp'])->name('settings.test-whatsapp');
     
-    // Debug routes
+    // 4. Debug Routes
     Route::get('/debug-logo', function () {
         return view('debug-logo');
     })->name('debug.logo');
@@ -98,52 +107,4 @@ Route::middleware(['auth'])->group(function () {
         $pdf->setOptions(['isRemoteEnabled' => true]);
         return $pdf->download('test-logo.pdf');
     })->name('test.logo.pdf');
-});
-
-Route::middleware('auth')->group(function () {
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-});
-
-require __DIR__.'/auth.php';
-
-// Application routes
-Route::middleware(['auth'])->group(function () {
-    // Invoice routes
-    Route::resource('invoices', InvoiceController::class);
-    Route::get('/invoices/{invoice}/export', [InvoiceController::class, 'exportPdf'])->name('invoices.export');
-    Route::post('/invoices/{invoice}/continue', [InvoiceController::class, 'continuePayment'])->name('invoices.continue');
-    Route::post('/invoices/{invoice}/whatsapp', [InvoiceController::class, 'sendWhatsapp'])->name('invoices.whatsapp');
-    
-    // Bulk actions
-    Route::post('/invoices/bulk-export', [InvoiceController::class, 'bulkExport'])->name('invoices.bulk-export');
-    Route::delete('/invoices/bulk-delete', [InvoiceController::class, 'bulkDelete'])->name('invoices.bulk-delete');
-    
-    // Settings routes
-    Route::get('/settings', [SettingController::class, 'edit'])->name('settings.edit');
-    Route::post('/settings', [SettingController::class, 'update'])->name('settings.update');
-    Route::post('/settings/test-whatsapp', [SettingController::class, 'testWhatsApp'])->name('settings.test-whatsapp');
-    
-    // Debug routes
-    Route::get('/debug-logo', function () {
-        return view('debug-logo');
-    })->name('debug.logo');
-    
-    Route::get('/test-logo-pdf', function () {
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.test-logo');
-        $pdf->setOptions(['isRemoteEnabled' => true]);
-        return $pdf->download('test-logo.pdf');
-    })->name('test.logo.pdf');
-
-   
-    // Existing invoice routes (with authentication)
-    Route::middleware('auth')->group(function () {
-        Route::resource('invoices', InvoiceController::class);
-        Route::post('/invoices/{invoice}/send-whatsapp', [InvoiceController::class, 'sendWhatsapp'])->name('invoices.send-whatsapp');
-        Route::get('/invoices/{invoice}/export-pdf', [InvoiceController::class, 'exportPdf'])->name('invoices.export-pdf');
-        Route::post('/invoices/bulk-export', [InvoiceController::class, 'bulkExport'])->name('invoices.bulk-export');
-        Route::post('/invoices/bulk-delete', [InvoiceController::class, 'bulkDelete'])->name('invoices.bulk-delete');
-        Route::get('/invoices/{invoice}/continue-payment', [InvoiceController::class, 'continuePayment'])->name('invoices.continue-payment');
-    });
 });
